@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
@@ -17,23 +18,19 @@ func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
-	if status := responseRecorder.Code; status != http.StatusOK {
-		t.Fatalf("expected status code: %d, got %d", http.StatusOK, status)
-	}
+	assert.Equal(t, http.StatusOK, responseRecorder.Code)
+	expected := "Мир кофе,Сладкоежка,Кофе и завтраки,Сытый студент"
+	assert.Equal(t, expected, responseRecorder.Body.String())
 
 	body := responseRecorder.Body.String()
 	list := strings.Split(body, ",")
+	assert.Equal(t, totalCount, len(list))
 
-	if len(list) != totalCount {
-		t.Errorf("expected cafe count: %d, got %d", totalCount, len(list))
-	}
 }
 
 func TestMainHandlerCorrectRequest(t *testing.T) {
 	req, err := http.NewRequest("GET", "/cafe?count=2&city=moscow", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	responseRecorder := httptest.NewRecorder()
 	handler := http.HandlerFunc(mainHandle)
@@ -43,16 +40,15 @@ func TestMainHandlerCorrectRequest(t *testing.T) {
 	assert.NotEmpty(t, responseRecorder.Body.String())
 	assert.Len(t, strings.Split(responseRecorder.Body.String(), ","), 2)
 }
+
 func TestMainHandlerUnsupportedCity(t *testing.T) {
 	req, err := http.NewRequest("GET", "/cafe?count=2&city=unknown", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	responseRecorder := httptest.NewRecorder()
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
 	assert.Equal(t, http.StatusBadRequest, responseRecorder.Code)
-	assert.Equal(t, "wrong city", responseRecorder.Body.String())
+	assert.Equal(t, "wrong city value", responseRecorder.Body.String())
 }
